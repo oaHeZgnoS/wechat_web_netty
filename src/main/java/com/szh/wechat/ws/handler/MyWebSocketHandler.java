@@ -1,4 +1,4 @@
-package com.szh.wechat.handler;
+package com.szh.wechat.ws.handler;
 
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
@@ -33,6 +33,22 @@ public class MyWebSocketHandler extends SimpleChannelInboundHandler<TextWebSocke
 	protected void channelRead0(ChannelHandlerContext ctx, TextWebSocketFrame msg) throws Exception {
 		log.info("服务器收到数据: {}", msg.text());
 		// TODO 自己的消息转发业务
+	}
+
+	/**
+	 * 给固定的人发消息
+	 */
+	private void sendMessage(ChannelHandlerContext ctx, TextWebSocketFrame msg) {
+		String msg2 = "你好，" + ctx.channel().localAddress() + "给固定的人发消息";
+		ctx.channel().writeAndFlush(new TextWebSocketFrame(msg2));
+	}
+
+	/**
+	 * 给所有客户端发群组消息
+	 */
+	private void sendAllMessage(ChannelHandlerContext ctx, TextWebSocketFrame msg) {
+		String msg2 = "你好，这一条是群发消息";
+		channelGroup.writeAndFlush(new TextWebSocketFrame(msg2));
 	}
 
 }

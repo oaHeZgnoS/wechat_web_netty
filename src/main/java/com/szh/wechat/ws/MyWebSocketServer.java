@@ -3,7 +3,7 @@ package com.szh.wechat.ws;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
-import com.szh.wechat.handler.MyWebSocketHandler;
+import com.szh.wechat.ws.handler.MyWebSocketHandler;
 
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.ChannelFuture;
@@ -31,6 +31,7 @@ public class MyWebSocketServer {
 		try {
 			ServerBootstrap boot = new ServerBootstrap().group(bossGroup, workerGroup)
 					.channel(NioServerSocketChannel.class)
+					.localAddress(port)
 					.childHandler(new ChannelInitializer<SocketChannel>() {
 						
 						@Override
