@@ -1,5 +1,7 @@
 package com.szh.wechat.ws;
 
+import javax.annotation.PostConstruct;
+
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
@@ -25,6 +27,7 @@ public class MyWebSocketServer {
 	@Value("${server.port}")
 	private int port;
 
+	@PostConstruct
 	public void start() throws Exception {
 		EventLoopGroup bossGroup = new NioEventLoopGroup(1);
 		EventLoopGroup workerGroup = new NioEventLoopGroup(200);
@@ -53,8 +56,8 @@ public class MyWebSocketServer {
 			f.channel().closeFuture().sync();
 		} finally {
 			// 优雅退出，释放线程池资源
-			bossGroup.shutdownGracefully();
-			workerGroup.shutdownGracefully();
+			bossGroup.shutdownGracefully().sync();
+			workerGroup.shutdownGracefully().sync();
 		}
 	}
 

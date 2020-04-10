@@ -1,5 +1,12 @@
 package com.szh.wechat.ws.handler;
 
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+
+import javax.websocket.Session;
+
+import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.group.ChannelGroup;
@@ -13,6 +20,11 @@ public class MyWebSocketHandler extends SimpleChannelInboundHandler<TextWebSocke
 
 	public static ChannelGroup channelGroup;
 
+	/**
+     * 存放所有在线的客户端userId->session
+     */
+    private static Map<String, Channel> clients = new ConcurrentHashMap<>();
+
 	static {
 		channelGroup = new DefaultChannelGroup(GlobalEventExecutor.INSTANCE);
 	}
@@ -21,6 +33,12 @@ public class MyWebSocketHandler extends SimpleChannelInboundHandler<TextWebSocke
 	public void channelActive(ChannelHandlerContext ctx) throws Exception {
 		log.info("客户端接入, 通道开启..");
 		channelGroup.add(ctx.channel());
+		log.info("onOpen前存活: {}", clients.keySet());
+    	//String userId = requestParameterMap.get("fromId").get(0);
+        //log.info("用户上线了, userId为:{}, sessionId为:{}", userId, session.getId());
+        //将新用户存入在线的组
+        //clients.put(userId, session);
+        log.info("onOpen后存活: {}", clients.keySet());
 	}
 
 	@Override
