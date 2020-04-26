@@ -106,7 +106,8 @@
 		            console.log("您的浏览器支持WebSocket");
 		            //实现化WebSocket对象，指定要连接的服务器地址与端口  建立连接
 		            var curId = $(".curAccount").attr("id");
-		            var socketUrl = window.location.origin.replace("https","ws").replace("http","ws") + "/test?fromId=" + curId;
+		            // var socketUrl = window.location.origin.replace("https","ws").replace("http","ws") + "/test?fromId=" + curId;
+		            var socketUrl = "ws://localhost:8001" + "/test?fromId=" + curId;
 		            console.log(socketUrl);
 		            if (socket != null) {
 		                socket.close();

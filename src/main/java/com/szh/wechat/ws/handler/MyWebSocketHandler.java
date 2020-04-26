@@ -1,10 +1,7 @@
 package com.szh.wechat.ws.handler;
 
-import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-
-import javax.websocket.Session;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
@@ -51,6 +48,11 @@ public class MyWebSocketHandler extends SimpleChannelInboundHandler<TextWebSocke
 	protected void channelRead0(ChannelHandlerContext ctx, TextWebSocketFrame msg) throws Exception {
 		log.info("服务器收到数据: {}", msg.text());
 		// TODO 自己的消息转发业务
+	}
+
+	@Override
+	public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+		log.error("onError: {}, 当前存活：{}", cause.getMessage(), clients.keySet());
 	}
 
 	/**

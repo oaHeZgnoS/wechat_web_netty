@@ -24,17 +24,18 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class MyWebSocketServer {
 
-	@Value("${server.port}")
-	private int port;
+	//@Value("${server.port:8001}")
+	private int port = 8001;
 
-	@PostConstruct
+	/*@PostConstruct*/
 	public void start() throws Exception {
-		EventLoopGroup bossGroup = new NioEventLoopGroup(1);
-		EventLoopGroup workerGroup = new NioEventLoopGroup(200);
+		EventLoopGroup bossGroup = new NioEventLoopGroup();
+		EventLoopGroup workerGroup = new NioEventLoopGroup();
+		log.info("MyWebSocketServer is starting at Port: {}", port);
 		try {
 			ServerBootstrap boot = new ServerBootstrap().group(bossGroup, workerGroup)
 					.channel(NioServerSocketChannel.class)
-					.localAddress(port)
+					//.localAddress(port)
 					.childHandler(new ChannelInitializer<SocketChannel>() {
 						
 						@Override
@@ -54,6 +55,8 @@ public class MyWebSocketServer {
 			ChannelFuture f = boot.bind(port).sync();
 			// 等待服务端监听端口关闭
 			f.channel().closeFuture().sync();
+		} catch (Exception e) {
+			log.error("Error occurred while starting MyWebSocketServer! Caused by: {}", e.getMessage());
 		} finally {
 			// 优雅退出，释放线程池资源
 			bossGroup.shutdownGracefully().sync();
