@@ -1,74 +1,96 @@
 package com.szh.wechat.ws.handler;
 
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
+
+import com.alibaba.fastjson.JSONObject;
+import com.szh.wechat.ws.MyChannelHandlerPool;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelId;
 import io.netty.channel.SimpleChannelInboundHandler;
-import io.netty.channel.group.ChannelGroup;
-import io.netty.channel.group.DefaultChannelGroup;
 import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
-import io.netty.util.concurrent.GlobalEventExecutor;
+import io.netty.handler.timeout.IdleState;
+import io.netty.handler.timeout.IdleStateEvent;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 public class MyWebSocketHandler extends SimpleChannelInboundHandler<TextWebSocketFrame> {
 
-	public static ChannelGroup channelGroup;
+    @Override
+    public void channelActive(ChannelHandlerContext ctx) throws Exception {
+    	log.info("与客户端建立连接，通道开启！");
+        //添加到channelGroup通道组
+        MyChannelHandlerPool.channelGroup.add(ctx.channel());
+    }
 
-	/**
-     * 存放所有在线的客户端userId->session
+    @Override
+    public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+    	log.info("与客户端断开连接，通道关闭！");
+        //移除到channelGroup 通道组
+        MyChannelHandlerPool.channelGroup.remove(ctx.channel());
+    }
+
+    @Override
+    protected void channelRead0(ChannelHandlerContext ctx, TextWebSocketFrame msg) throws Exception {
+    	log.info("服务器收到客户端数据：{}", msg.text());
+        String msgText = msg.text();
+        JSONObject jsonObject = JSONObject.parseObject(msgText);
+        if ("register".equals(jsonObject.getString("type"))) {
+        	register(jsonObject, ctx.channel().id());
+        } else {
+            sendToSomeone(jsonObject);
+        }
+    }
+
+    //ping、pong
+    @Override
+    public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
+        //用于触发用户事件，包含触发读空闲、写空闲、读写空闲
+        if (evt instanceof IdleStateEvent) {
+            IdleStateEvent event = (IdleStateEvent) evt;
+            if (event.state() == IdleState.ALL_IDLE) {
+                Channel channel = ctx.channel();
+                //关闭无用channel，以防资源浪费
+                channel.close();
+            }
+        }
+    }
+
+    /**
+     * 群发所有人
      */
-    private static Map<String, Channel> clients = new ConcurrentHashMap<>();
+    private void sendAllMessage(String message){
+        //收到信息后，群发给所有channel
+        MyChannelHandlerPool.channelGroup.writeAndFlush( new TextWebSocketFrame(message));
+    }
 
-	static {
-		channelGroup = new DefaultChannelGroup(GlobalEventExecutor.INSTANCE);
-	}
+    /**
+     * 私聊
+     */
+    private void sendToSomeone(JSONObject map) {
+    	String toId = map.getString("toId");
+    	ChannelId toChannelId = MyChannelHandlerPool.channelIdMap.get(toId);
+		// 目标对象是否已下线,若ignore此元素，会造成自身session被关闭
+		if (toChannelId != null) {
+			Channel targetChannel = MyChannelHandlerPool.channelGroup.find(toChannelId);
+			targetChannel.writeAndFlush(new TextWebSocketFrame(map.toString()));
+		} else {
+			log.warn("对方{}已下线", toId);
+			JSONObject data = new JSONObject();
+			data.put("fromId", toId);
+			data.put("state", "fail");
+			data.put("message", String.format("<发送失败>: 对方%s已下线", toId));
+			String fromId = map.getString("fromId");
+			ChannelId fromChannelId = MyChannelHandlerPool.channelIdMap.get(fromId);
+			Channel selfChannel = MyChannelHandlerPool.channelGroup.find(fromChannelId);
+			selfChannel.writeAndFlush(new TextWebSocketFrame(data.toJSONString()));
+		}
+    }
 
-	@Override
-	public void channelActive(ChannelHandlerContext ctx) throws Exception {
-		log.info("客户端接入, 通道开启..");
-		channelGroup.add(ctx.channel());
-		log.info("onOpen前存活: {}", clients.keySet());
-    	//String userId = requestParameterMap.get("fromId").get(0);
-        //log.info("用户上线了, userId为:{}, sessionId为:{}", userId, session.getId());
-        //将新用户存入在线的组
-        //clients.put(userId, session);
-        log.info("onOpen后存活: {}", clients.keySet());
-	}
-
-	@Override
-	public void channelInactive(ChannelHandlerContext ctx) throws Exception {
-		log.info("客户端断开, 通道关闭..");
-		channelGroup.remove(ctx.channel());
-	}
-
-	@Override
-	protected void channelRead0(ChannelHandlerContext ctx, TextWebSocketFrame msg) throws Exception {
-		log.info("服务器收到数据: {}", msg.text());
-		// TODO 自己的消息转发业务
-	}
-
-	@Override
-	public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
-		log.error("onError: {}, 当前存活：{}", cause.getMessage(), clients.keySet());
-	}
-
-	/**
-	 * 给固定的人发消息
-	 */
-	private void sendMessage(ChannelHandlerContext ctx, TextWebSocketFrame msg) {
-		String msg2 = "你好，" + ctx.channel().localAddress() + "给固定的人发消息";
-		ctx.channel().writeAndFlush(new TextWebSocketFrame(msg2));
-	}
-
-	/**
-	 * 给所有客户端发群组消息
-	 */
-	private void sendAllMessage(ChannelHandlerContext ctx, TextWebSocketFrame msg) {
-		String msg2 = "你好，这一条是群发消息";
-		channelGroup.writeAndFlush(new TextWebSocketFrame(msg2));
-	}
-
+    private void register(JSONObject map, ChannelId channelId) {
+        String userId = map.getString("fromId");
+        MyChannelHandlerPool.channelIdMap.put(userId, channelId);
+        log.info("{}注册后的连接：{}", userId, MyChannelHandlerPool.channelIdMap.keySet());
+    }
 }

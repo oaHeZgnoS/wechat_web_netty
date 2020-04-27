@@ -75,30 +75,6 @@
 			var socket;
 			var currentUser;
 			window["userArr"] = [];
-			//心跳检测
-			var heartCheck = {
-				timeout: 30000,
-				timeoutObj: null,
-				serverTimeoutObj: null,
-				start: function() {
-					console.log('start heartCheck');
-					var self = this;
-					this.timeoutObj && clearTimeout(this.timeoutObj);
-					this.serverTimeoutObj && clearTimeout(this.serverTimeoutObj);
-					this.timeoutObj = setTimeout(function() {
-						console.log('heartCheck doing...');
-						//发送测试信息，后端收到后，返回一个消息，
-						let data = {};
-						data["type"] = "heartbeat";
-						data["fromId"] = currentUser.id;
-						data["message"] = "心跳检测: " + data["fromId"];
-						socket.send(JSON.stringify(data));
-						self.serverTimeoutObj = setTimeout(function() {
-							socket.close();
-						}, self.timeout);
-					}, this.timeout);
-				}
-			};
 		    function openSocket() {
 		        if (typeof(WebSocket) == "undefined") {
 		            console.log("您的浏览器不支持WebSocket");
@@ -107,7 +83,8 @@
 		            //实现化WebSocket对象，指定要连接的服务器地址与端口  建立连接
 		            var curId = $(".curAccount").attr("id");
 		            // var socketUrl = window.location.origin.replace("https","ws").replace("http","ws") + "/test?fromId=" + curId;
-		            var socketUrl = "ws://localhost:8001" + "/test?fromId=" + curId;
+		            // var socketUrl = "ws://localhost:8001" + "/test?fromId=" + curId;
+		            var socketUrl = "ws://localhost:8001" + "/test";
 		            console.log(socketUrl);
 		            if (socket != null) {
 		                socket.close();
@@ -118,49 +95,40 @@
 		            socket.onopen = function() {
 		                console.log("websocket已打开");
 		                //socket.send("这是来自客户端的消息" + location.href + new Date());
-		              	//心跳检测重置
-		            	heartCheck.start();
+		                register();
 		            };
 		            //获得消息事件
 		            socket.onmessage = function(event) {
 		                // 发现消息进入    开始处理前端触发逻辑
 		                // console.log(event);
-		                //拿到任何消息都说明当前连接是正常的,心跳续签
-						heartCheck.start();
 		                let dataStr = event.data;
 		                let data = JSON.parse(dataStr);
-		                // 若是收到自身的心跳消息，只打印日志
-	                	let type = data["type"];
-		                if (type == "heartbeat") {
-		                	console.log("收到心跳回复!");
-		                } else {
-			                let fromId = data["fromId"];
-			                let message = data["message"];
-			                let state = data["state"];
-			                $(".msghisDiv div[class^=his_]").hide();
-			                if ($(".msghisDiv .his_" + fromId).length == 0) {
-				                $(".msghisDiv").append('<div class="his_' + fromId + '"></div>');
-			                }
-			                $(".msghisDiv .his_" + fromId).append('<div><b>收到：</b>' + formatTime(new Date(), 'yyyy-MM-dd HH:mm:ss') + '<br>' + message + '<div>');
-			                $(".msghisDiv .his_" + fromId).show();
-			                $(".userRow").removeClass("activeFriend");
-			                $(".userRow[data-id=" + fromId + "]").addClass("activeFriend");
-							var fromUser = window["userArr"].filter(function(u) {
-								if (u.id == fromId) {
-									return true;
-								}
-							})[0];
-							let username = fromUser["username"];
-							let account = fromUser["account"];
-			                $(".toFriend").text(username + account);
-			                if (state == "fail") {
-								$(".toFriend").attr("toId", data["toId"]);
-			                } else {
-			                	$(".toFriend").attr("toId", fromId);
-			                	notifyNewMsg(fromId, message);
-			                }
-			                $(".chatarea").show();
+		                let fromId = data["fromId"];
+		                let message = data["message"];
+		                let state = data["state"];
+		                $(".msghisDiv div[class^=his_]").hide();
+		                if ($(".msghisDiv .his_" + fromId).length == 0) {
+			                $(".msghisDiv").append('<div class="his_' + fromId + '"></div>');
 		                }
+		                $(".msghisDiv .his_" + fromId).append('<div><b>收到：</b>' + formatTime(new Date(), 'yyyy-MM-dd HH:mm:ss') + '<br>' + message + '<div>');
+		                $(".msghisDiv .his_" + fromId).show();
+		                $(".userRow").removeClass("activeFriend");
+		                $(".userRow[data-id=" + fromId + "]").addClass("activeFriend");
+						var fromUser = window["userArr"].filter(function(u) {
+							if (u.id == fromId) {
+								return true;
+							}
+						})[0];
+						let username = fromUser["username"];
+						let account = fromUser["account"];
+		                $(".toFriend").text(username + account);
+		                if (state == "fail") {
+							$(".toFriend").attr("toId", data["toId"]);
+		                } else {
+		                	$(".toFriend").attr("toId", fromId);
+		                	notifyNewMsg(fromId, message);
+		                }
+		                $(".chatarea").show();
 		            };
 		            //关闭事件
 		            socket.onclose = function(event) {
@@ -168,7 +136,8 @@
 		                console.log("websocket已关闭");
 		            };
 		            //发生了错误事件
-		            socket.onerror = function() {
+		            socket.onerror = function(event) {
+		            	console.log(event);
 		                console.log("websocket发生了错误");
 		            }
 		        }
@@ -243,6 +212,18 @@
 		            socket.send(JSON.stringify(data));
 		        }
 			}
+			function register() {
+	            if (!window.WebSocket) {return;}
+	            if (socket.readyState == WebSocket.OPEN) {
+	            	let data = {};
+					data["type"] = "register";
+					data["fromId"] = currentUser.id;
+					data["message"] = "netty注册请求: " + data["fromId"];
+					socket.send(JSON.stringify(data));
+	            } else {
+	                alert("WebSocket 连接没有建立成功！");
+	            }
+	        }
 		</script>
 
     </body>
