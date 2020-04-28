@@ -1,8 +1,9 @@
 package com.szh.wechat.ws.handler;
 
-import java.util.Map;
-
 import com.alibaba.fastjson.JSONObject;
+import com.szh.wechat.common.WeChatConstance.MsgKey;
+import com.szh.wechat.common.WeChatConstance.MsgState;
+import com.szh.wechat.common.WeChatConstance.MsgType;
 import com.szh.wechat.ws.MyChannelHandlerPool;
 
 import io.netty.channel.Channel;
@@ -20,14 +21,14 @@ public class MyWebSocketHandler extends SimpleChannelInboundHandler<TextWebSocke
     @Override
     public void channelActive(ChannelHandlerContext ctx) throws Exception {
     	log.info("与客户端建立连接，通道开启！");
-        //添加到channelGroup通道组
+        // 添加到channelGroup通道组
         MyChannelHandlerPool.channelGroup.add(ctx.channel());
     }
 
     @Override
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
     	log.info("与客户端断开连接，通道关闭！");
-        //移除到channelGroup 通道组
+        // 从channelGroup通道组移除
         MyChannelHandlerPool.channelGroup.remove(ctx.channel());
     }
 
@@ -36,7 +37,7 @@ public class MyWebSocketHandler extends SimpleChannelInboundHandler<TextWebSocke
     	log.info("服务器收到客户端数据：{}", msg.text());
         String msgText = msg.text();
         JSONObject jsonObject = JSONObject.parseObject(msgText);
-        if ("register".equals(jsonObject.getString("type"))) {
+        if (MsgType.REGISTER.equals(jsonObject.getString(MsgKey.TYPE))) {
         	register(jsonObject, ctx.channel().id());
         } else {
             sendToSomeone(jsonObject);
@@ -69,7 +70,7 @@ public class MyWebSocketHandler extends SimpleChannelInboundHandler<TextWebSocke
      * 私聊
      */
     private void sendToSomeone(JSONObject map) {
-    	String toId = map.getString("toId");
+    	String toId = map.getString(MsgKey.TO_ID);
     	ChannelId toChannelId = MyChannelHandlerPool.channelIdMap.get(toId);
 		// 目标对象是否已下线,若ignore此元素，会造成自身session被关闭
 		if (toChannelId != null) {
@@ -78,10 +79,10 @@ public class MyWebSocketHandler extends SimpleChannelInboundHandler<TextWebSocke
 		} else {
 			log.warn("对方{}已下线", toId);
 			JSONObject data = new JSONObject();
-			data.put("fromId", toId);
-			data.put("state", "fail");
-			data.put("message", String.format("<发送失败>: 对方%s已下线", toId));
-			String fromId = map.getString("fromId");
+			data.put(MsgKey.FROM_ID, toId);
+			data.put(MsgKey.STATE, MsgState.FAIL);
+			data.put(MsgKey.MESSAGE, String.format("<发送失败>: 对方%s已下线", toId));
+			String fromId = map.getString(MsgKey.FROM_ID);
 			ChannelId fromChannelId = MyChannelHandlerPool.channelIdMap.get(fromId);
 			Channel selfChannel = MyChannelHandlerPool.channelGroup.find(fromChannelId);
 			selfChannel.writeAndFlush(new TextWebSocketFrame(data.toJSONString()));
@@ -89,7 +90,7 @@ public class MyWebSocketHandler extends SimpleChannelInboundHandler<TextWebSocke
     }
 
     private void register(JSONObject map, ChannelId channelId) {
-        String userId = map.getString("fromId");
+        String userId = map.getString(MsgKey.FROM_ID);
         MyChannelHandlerPool.channelIdMap.put(userId, channelId);
         log.info("{}注册后的连接：{}", userId, MyChannelHandlerPool.channelIdMap.keySet());
     }
