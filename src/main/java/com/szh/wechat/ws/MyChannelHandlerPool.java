@@ -1,7 +1,7 @@
 package com.szh.wechat.ws;
 
-import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 import io.netty.channel.ChannelId;
 import io.netty.channel.group.ChannelGroup;
@@ -15,7 +15,7 @@ public class MyChannelHandlerPool {
     /**
      * map: userId,ChannelId
      */
-    public static Map<String, ChannelId> channelIdMap = new HashMap<>();
+    public static Map<String, ChannelId> channelIdMap = new ConcurrentHashMap<>();
 
     public static ChannelGroup channelGroup = new DefaultChannelGroup(GlobalEventExecutor.INSTANCE);
 
