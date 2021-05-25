@@ -84,7 +84,7 @@
 		            var curId = $(".curAccount").attr("id");
 		            // var socketUrl = window.location.origin.replace("https","ws").replace("http","ws") + "/test?fromId=" + curId;
 		            // var socketUrl = "ws://localhost:8001" + "/test?fromId=" + curId;
-		            var socketUrl = "ws://localhost:8001" + "/test";
+		            var socketUrl = window.location.origin.replace("https","ws").replace("http","ws").replace(window.location.port, "8001") + "/test";
 		            console.log(socketUrl);
 		            if (socket != null) {
 		                socket.close();
