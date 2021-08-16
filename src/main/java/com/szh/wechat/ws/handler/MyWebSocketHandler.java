@@ -28,6 +28,7 @@ public class MyWebSocketHandler extends SimpleChannelInboundHandler<TextWebSocke
     @Override
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
     	log.info("与客户端断开连接，通道关闭！");
+    	// TODO 从MyChannelHandlerPool.channelIdMap中移除掉线用户
         // 从channelGroup通道组移除
         MyChannelHandlerPool.channelGroup.remove(ctx.channel());
     }

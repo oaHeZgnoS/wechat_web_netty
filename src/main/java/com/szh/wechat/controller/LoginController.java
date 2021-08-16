@@ -34,19 +34,13 @@ public class LoginController {
 		return "login";
 	}
 
-	/**
-	 * 登陆失败则返回到login.html或fail.html（fail则不牵扯到jsp的问题）；<br>
-	 * 登陆成功则返回到当前用户拥有权限的第一个html页面，此页面一加载就立即ajax访问页面数据，包括菜单列表。
-	 */
 	@PostMapping("/doLogin")
 	public void dispatchLogin(HttpServletRequest req, HttpServletResponse resp) throws Exception {
 		String account = req.getParameter("account");
 		String password = req.getParameter("password");
-		// 获取到的这么多user（同一账户）只是role或门店不同，密码等其他都一致
 		User user = userService.selectByAccountAndPassword(account, password);
 		if (user != null) {
 			log.debug("用户{}登陆验证成功", user);
-			// 登陆成功后，需要看此用户的信息是否存在于redis，存在则刷新过期时间，不存在则插入记录
 			Cookie cookie = new Cookie("userId", user.getId() + "");
 			// 负数代表浏览器关闭则删除cookie
 			cookie.setMaxAge(-1);
